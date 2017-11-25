@@ -30,7 +30,8 @@ from Deutscher Wetter (DWD) Dienst Climate Data Center (CDC)
 
 
 ## config_folders
-							'air_temperature': '/pub/CDC/observations_germany/climate/hourly/air_temperature/recent/',
+	      
+	      'air_temperature': '/pub/CDC/observations_germany/climate/hourly/air_temperature/recent/',
               'cloudiness': '/pub/CDC/observations_germany/climate/hourly/cloudiness/recent/',
               'precipitation': '/pub/CDC/observations_germany/climate/hourly/precipitation/recent/',
               'pressure': '/pub/CDC/observations_germany/climate/hourly/pressure/recent/',
