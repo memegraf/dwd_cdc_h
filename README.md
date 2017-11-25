@@ -1,5 +1,5 @@
 # dwd_cdc_h
-Download Weather Data
+Download Weather Data --- Work in Progress ---
 
 Script to gather the free climate hourly station observations
 from Deutscher Wetter (DWD) Dienst Climate Data Center (CDC)
