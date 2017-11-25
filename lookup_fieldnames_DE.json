@@ -1,93 +1,93 @@
 [
   {
     "Metrik": "STATIONS_ID",
-    "Kurztext": "„Stationsidentifikationsnummer“",
+    "Kurztext": "Stationsidentifikationsnummer",
     "Langtext": "Stationsidentifikationsnummer",
     "UoM": ""
   },
   {
     "Metrik": "MESS_DATUM",
-    "Kurztext": "„Zeitstempel“",
+    "Kurztext": "Zeitstempel",
     "Langtext": "Zeitstempel",
     "UoM": "yyyymmddhh"
   },
   {
     "Metrik": "QN_8",
-    "Kurztext": "„Qualitätsniveau“",
+    "Kurztext": "Qualitätsniveau",
     "Langtext": "Qualitätsniveau der nachfolgenden Spalten",
-    "UoM": "1 - nur formale Prüfung 2 - nach individuellen Kriterien geprüft 3 - alte automatische Prüfung und Korrektur 5 – historische“"
+    "UoM": "1 - nur formale Prüfung 2 - nach individuellen Kriterien geprüft 3 - alte automatische Prüfung und Korrektur 5 – historische"
   },
   {
     "Metrik": "R1",
-    "Kurztext": "„Niederschlagshöhe“",
+    "Kurztext": "Niederschlagshöhe",
     "Langtext": "stündliche Niederschlagshöhe",
     "UoM": "mm"
   },
   {
     "Metrik": "RS_IND",
-    "Kurztext": "„Index“",
+    "Kurztext": "Index",
     "Langtext": "Index",
     "UoM": "0 kein Niederschlag 1 Niederschlag gefallen"
   },
   {
     "Metrik": "WRTR",
-    "Kurztext": "„WR_Niederschlagsform“",
+    "Kurztext": "WR_Niederschlagsform",
     "Langtext": "WR-Niederschlagsform",
     "UoM": "WR -Codierung"
   },
   {
     "Metrik": "eor",
-    "Kurztext": "„Ende“",
+    "Kurztext": "Ende",
     "Langtext": "Ende",
     "UoM": "data record"
   },
   {
     "Metrik": "V_N_I",
-    "Kurztext": "„Messung“",
+    "Kurztext": "Messung",
     "Langtext": "Index wie Messung erhoben",
     "UoM": "P vom Beobachter I vom Instrument"
   },
   {
     "Metrik": "V_N",
-    "Kurztext": "„BedeckungsgradWolken“",
+    "Kurztext": "BedeckungsgradWolken",
     "Langtext": "Bedeckungsgrad aller Wolken",
     "UoM": "1/8 nicht erkennbar: -1"
   },
   {
     "Metrik": "QN_9",
-    "Kurztext": "„Qualitätsniveau“",
+    "Kurztext": "Qualitätsniveau",
     "Langtext": "Qualitätsniveau der nachfolgenden Spalten",
     "UoM": "1 - nur formale Prüfung 2 - nach individuellen Kriterien geprüft 3 - alte automatische Prüfung und Korrektur 5 - historische"
   },
   {
     "Metrik": "TT_TU",
-    "Kurztext": "„Lufttemperatur“",
+    "Kurztext": "Lufttemperatur",
     "Langtext": "Lufttemperatur in 2m Höhe",
     "UoM": "°C"
   },
   {
     "Metrik": "RF_TU",
-    "Kurztext": "„relFeuchte“",
+    "Kurztext": "relFeuchte",
     "Langtext": "relative Feuchte",
     "UoM": "%"
   },
   {
     "Metrik": "P",
-    "Kurztext": "„2LuftdruckNN“",
+    "Kurztext": "LuftdruckNN",
     "Langtext": "Luftdruck auf Meereshöhe NN",
     "UoM": "hPA"
   },
   {
     "Metrik": "P0",
-    "Kurztext": "„2LuftdruckStationshöhe“",
+    "Kurztext": "LuftdruckStationshöhe",
     "Langtext": "Luftdruck auf Stationshöhe",
     "UoM": "hPA"
   },
   {
     "Metrik": "QN_2",
-    "Kurztext": "„Qualitätsniveau“",
+    "Kurztext": "Qualitätsniveau",
     "Langtext": "Qualitätsniveau der nachfolgenden Spalten",
-    "UoM": "1 - nur formale Prüfung 2 - nach individuellen Kriterien geprüft 3 - alte automatische Prüfung und Korrektur 5 – historische“"
+    "UoM": "1 - nur formale Prüfung 2 - nach individuellen Kriterien geprüft 3 - alte automatische Prüfung und Korrektur 5 – historische"
   },
   {
     "Metrik": "V_TE002",
@@ -127,37 +127,37 @@
   },
   {
     "Metrik": "QN_592",
-    "Kurztext": "„Qualitätsniveau“",
+    "Kurztext": "Qualitätsniveau",
     "Langtext": "Qualitätsniveau der nachfolgenden Spalten",
-    "UoM": "1 - nur formale Prüfung 2 - nach individuellen Kriterien geprüft 3 - alte automatische Prüfung und Korrektur 5 – historische“"
+    "UoM": "1 - nur formale Prüfung 2 - nach individuellen Kriterien geprüft 3 - alte automatische Prüfung und Korrektur 5 – historische"
   },
   {
     "Metrik": "ATMO_LBERG",
-    "Kurztext": "„atmosphärischeGegenstrahlung“",
+    "Kurztext": "atmosphärischeGegenstrahlung",
     "Langtext": "Stundensumme der atmosphärischen Gegenstrahlung",
     "UoM": "J/cm^2"
   },
   {
     "Metrik": "FD_LBERG",
-    "Kurztext": "„solarStrahlung“",
+    "Kurztext": "solarStrahlung",
     "Langtext": "Stundensumme der diffusen solaren Strahlung",
     "UoM": "J/cm^2"
   },
   {
     "Metrik": "FG_LBERG",
-    "Kurztext": "„Globalstrahlung“",
+    "Kurztext": "Globalstrahlung",
     "Langtext": "Stundensumme der Globalstrahlung",
     "UoM": "J/cm^2"
   },
   {
     "Metrik": "SD_LBERG",
-    "Kurztext": "„Sonnenscheindauer“",
+    "Kurztext": "Sonnenscheindauer",
     "Langtext": "Stundensumme der Sonnenscheindauer",
     "UoM": "min"
   },
   {
     "Metrik": "ZENIT",
-    "Kurztext": "„ZenitwinkelSonne“",
+    "Kurztext": "ZenitwinkelSonne",
     "Langtext": "Zenitwinkel der Sonne bei Intervallmitte",
     "UoM": "Grad"
   },
@@ -171,7 +171,7 @@
     "Metrik": "QN_7",
     "Kurztext": "Qualitätsniveau der nachfolgenden Spalten",
     "Langtext": "Qualitätsniveau der nachfolgenden Spalten",
-    "UoM": "1 - nur formale Prüfung 2 - nach individuellen Kriterien geprüft 3 - alte automatische Prüfung und Korrektur 5 – historische“"
+    "UoM": "1 - nur formale Prüfung 2 - nach individuellen Kriterien geprüft 3 - alte automatische Prüfung und Korrektur 5 – historische"
   },
   {
     "Metrik": "SD_SO",
@@ -183,7 +183,7 @@
     "Metrik": "QN_3",
     "Kurztext": "Qualitätsniveau der nachfolgenden Spalten",
     "Langtext": "Qualitätsniveau der nachfolgenden Spalten",
-    "UoM": "1 - nur formale Prüfung 2 - nach individuellen Kriterien geprüft 3 - alte automatische Prüfung und Korrektur 5 – historische“"
+    "UoM": "1 - nur formale Prüfung 2 - nach individuellen Kriterien geprüft 3 - alte automatische Prüfung und Korrektur 5 – historische"
   },
   {
     "Metrik": "F",
