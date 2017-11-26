@@ -110,7 +110,7 @@ def dwd_send_event(dwd_event, config, sourcetype, key):
 
         if config['create_raw_dump'] == 'false':
             dwd_event.pop('Station', None)
-            dwd_event.pop(key, None)
+            dwd_event.pop('header', None)
             dwd_event.pop('Station_h', None)
 
         if config['create_names_dump'] == 'true':
@@ -118,7 +118,8 @@ def dwd_send_event(dwd_event, config, sourcetype, key):
 
         if config['create_fields_dump'] == 'false':
             dwd_event.pop('data', None)
-            dwd_event.pop('header', None)
+
+            dwd_event.pop(key, None)
 
         # send single events
         # jdata = {'event': json.dumps(dwd_event)}
