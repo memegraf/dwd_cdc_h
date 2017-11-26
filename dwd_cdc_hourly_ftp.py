@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding = utf-8
 
-# dwd_cdd_hourly_free_ftp
+# dwd_cdd_hourly_ftp
 # script to gather the free climate hourly station observations
 # from Deutscher Wetter (DWD) Dienst Climate Data Center (CDC)
 
@@ -20,8 +20,6 @@ def dwd_makenode(header, value):
     values = value.split(';')
     headers = header.split(';')
     data = dict(zip(headers, values))
-
-    logging.debug(data)
     return data
 
 
@@ -33,44 +31,64 @@ def dwd_extract_actual(dwd_file, key):
                 dwd_data = {}
 
                 # station data
-                # noinspection PyStatementEffect
-                [i for i, s in enumerate(filename) if 'Metadaten_Stationsname_' in s]
-                if 'Metadaten_Stationsname_' and '.txt' in filename:
+            if '.txt' in filename:
+
+                logging.debug('watching at file:')
+                logging.debug(filename)
+
+                # get station metadata
+                if 'Metadaten_Stationsname_' in filename:
                     with z.open(filename) as f:
+
+                        logging.debug('working at file:')
+                        logging.debug(filename)
+
                         lines = f.read().decode('latin1').splitlines()
 
-                        # 'raw_data'
-                        if dwd_config['create_raw_dump']:
-                            dwd_data['Station_h'] = lines[0]
+                        dwd_data['Station_h'] = lines[0]
 
-                        if 'generiert' or 'Legende:' in lines[-1]:
-                            dwd_data['Station'] = lines[-2]
+                        c = len(lines) - 1
+                        if ';' in lines[c]:
+                            dwd_data['Station'] = lines[c]
                         else:
-                            dwd_data['Station'] = lines[-1]
+                            for i in lines:
+                                if ';' in lines[i]:
+                                    dwd_data['Station'] = lines[i]
+
                         try:
-                            dwd_data['fields'] = dwd_makenode(dwd_data['Station_h'], dwd_data['Station'])
-                            logging.debug(dwd_data['fields'])
+
+                            dwd_data['meta'] = dwd_makenode(dwd_data['Station_h'].replace(' ', ''),
+                                                            dwd_data['Station'].replace(' ', ''))
+                            logging.debug('meta: ' + str(dwd_data['meta']))
+
                         except ValueError:
-                            logging.debug('can not make node, maybe no or corrupt data?' + str(sys.exc_info()))
-                        finally:
-                            logging.debug('---' + dwd_data['Station_h'] + '---' + dwd_data['Station'])
+                            logging.error('can not make node' + str(sys.exc_info()))
 
                 # get latest weatherdata measurement
-                if 'produkt_tu_stunde_' and '.txt' in filename:
+                if 'produkt_' in filename:
                     with z.open(filename) as f:
+
+                        logging.debug('working at file:')
+                        logging.debug(filename)
+
                         lines = f.read().decode('latin1').splitlines()
 
                         dwd_data['header'] = lines[0]
 
-                        if 'generiert' or 'Legende:' in lines[-1]:
-                            dwd_data[key] = lines[-2]
+                        c = len(lines) - 1
+                        if ';' in lines[c]:
+                            dwd_data[key] = lines[c]
                         else:
-                            dwd_data[key] = lines[-1]
+                            for i in lines:
+                                if ';' in lines[i]:
+                                    dwd_data[key] = lines[i]
+
                         try:
-                            dwd_data['data'] = dwd_makenode(dwd_data['header'], dwd_data[key])
-                            logging.debug(dwd_data['data'])
+                            dwd_data['data'] = dwd_makenode(dwd_data['header'].replace(' ', ''),
+                                                            dwd_data[key].replace(' ', ''))
+                            logging.debug('data: ' + str(dwd_data['data']))
                         except (RuntimeError, TypeError, NameError):
-                            logging.debug('can not make node' + str(sys.exc_info()))
+                            logging.error('can not make node' + str(sys.exc_info()))
 
                 dwd_data['OriginalFilename'] = str(filename)
                 dwd_data['Read_Timestamp'] = str(datetime.datetime.now())
@@ -82,17 +100,17 @@ def dwd_send_event(dwd_event, config, sourcetype, key):
     def get_names(fi):
         # named_data = {}
         lookup = open(fi)
-        named_data = json.loads(lookup.read().decode('utf-8'))
+        named_data = json.loads(lookup.read())
         return named_data
+
+    datastore = []
 
     try:
         dwd_event['sourcetype'] = sourcetype
 
         if config['create_raw_dump'] == 'false':
             dwd_event.pop('Station', None)
-            dwd_event.pop(key, None)
             dwd_event.pop('header', None)
-            dwd_event.pop('data', None)
             dwd_event.pop('Station_h', None)
 
         if config['create_names_dump'] == 'true':
@@ -101,45 +119,33 @@ def dwd_send_event(dwd_event, config, sourcetype, key):
         if config['create_fields_dump'] == 'false':
             dwd_event.pop('data', None)
 
-        jdata = {'event': json.dumps(dwd_event)}
+            dwd_event.pop(key, None)
 
-        # append to file (per sourcetype)
-        filename = dwd_event['sourcetype'].replace(':', '_')
-        with open(os.path.abspath(config['json_local_storage'] + '/' + filename + '.json'), 'a+') as myfile:
-            myfile.write(json.dumps(jdata) + ",".encode('utf-8'))
+        # send single events
+        # jdata = {'event': json.dumps(dwd_event)}
+
+        # append to list for batch export
+        datastore.append(dwd_event)
+
     except IOError:
         logging.error('file error while writing event' + str(sys.exc_info()))
     else:
         logging.debug('wrote event: ' + json.dumps(dwd_event))
+    finally:
+        return datastore
 
 
 def dwd_cleanup():
     # clear log, datafiles and downloads
     logging.debug('cleanup: ')
-
-    try:
-        rc = 'myrc'
-    except IOError:
-        logging.error('file error while cleaning up' + str(sys.exc_info()))
-    finally:
-        return rc
-
-
-def dwd_jsonformat(config):
-    # wrap data files into json array
-    logging.debug('jsonformat: ')
-    try:
-        rc = 'myrc'
-        print(str(config))
-    except IOError:
-        logging.error('file error while formatting data files' + str(sys.exc_info()))
-    finally:
-        return rc
+    pass
 
 
 def dwd_main(config, config_folders):
     # go to folder where to store the downloads
     os.chdir(config['ftp_local_storage'])
+
+    datastore = {}
 
     # open up ftp connection
     try:
@@ -166,25 +172,28 @@ def dwd_main(config, config_folders):
                     fhandle.close()
                 except(RuntimeError, TypeError, NameError):
                     logging.error('error while reading file' + str(sys.exc_info()))
-                    raise
                 else:
                     # process file
                     try:
                         print(filename + str(key))
                         mydata = dwd_extract_actual(filename, key)
                     except(RuntimeError, TypeError, NameError):
-                        logging.error('error while processing file' + str(sys.exc_info()))
+                        logging.error(
+                            str('error while processing file' + str(sys.exc_info())))
                     else:
                         # create json and send or save data as event
                         try:
                             # helper.log_debug(mydata)
-                            dwd_send_event(mydata, config, config[key + '_st'], str(key))
+                            datastore[filename] = dwd_send_event(mydata, config, config[key + '_st'], str(key))
                         except(RuntimeError, TypeError, NameError):
-                            logging.error('error while sending file' + str(sys.exc_info()))
+                            logging.error(
+                                str('error while sending file' + str(sys.exc_info())))
         finally:
-            # check if data files need to get reformated
-            if config['wrap_json'] == 'true':
-                dwd_jsonformat(config)
+            try:
+                with open(os.path.abspath(config['json_local_storage'] + '/' + key + '.json'), 'w') as myfile:
+                    myfile.write(json.dumps(datastore))
+            except IOError:
+                logging.error('can not save datafile' + str(sys.exc_info()))
 
 
 def validate_input():
@@ -212,7 +221,6 @@ def validate_input():
               'create_names_dump': 'false',  # false, short, mid, long # not implemented yet
               'create_fields_dump': 'true',
               'cleanup_before_perform': 'false',  # not implemented yet
-              'wrap_json': 'false'  # wrap data export into json array # not implemented yet
               }
 
     config_folders = {'air_temperature': '/pub/CDC/observations_germany/climate/hourly/air_temperature/recent/',
@@ -220,7 +228,7 @@ def validate_input():
                       'precipitation': '/pub/CDC/observations_germany/climate/hourly/precipitation/recent/',
                       'pressure': '/pub/CDC/observations_germany/climate/hourly/pressure/recent/',
                       'soil_temperature': '/pub/CDC/observations_germany/climate/hourly/soil_temperature/recent/',
-                      'solar': '/pub/CDC/observations_germany/climate/hourly/solar/recent/',
+                      'solar': '/pub/CDC/observations_germany/climate/hourly/solar/',
                       'sun': '/pub/CDC/observations_germany/climate/hourly/sun/recent/',
                       'wind': '/pub/CDC/observations_germany/climate/hourly/wind/recent/'}
 
@@ -228,16 +236,18 @@ def validate_input():
 
 
 # start working
-LOG_FILENAME = 'log.log'
+LOG_FILENAME = os.path.abspath(
+    os.getcwd() + '\log' + '/' + str(datetime.datetime.now()).replace('-',
+                                                                      '').replace(':', '') + '_' + 'log.log')
 logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG)
-logging.info("dwd script started")
+logging.info(str(datetime.datetime.now()) + '_' + "dwd script started")
 
 # get & set config
 dwd_config, dwd_config_folders = validate_input()
 
-logging.info('config=' + json.dumps(dwd_config))
-logging.info('datasources=' + json.dumps(dwd_config_folders))
+logging.info(str(datetime.datetime.now()) + '_' + 'config=' + json.dumps(dwd_config))
+logging.info(str(datetime.datetime.now()) + '_' + 'datasources=' + json.dumps(dwd_config_folders))
 
 dwd_main(dwd_config, dwd_config_folders)
 
-logging.info("dwd script ended")
+logging.info(str(datetime.datetime.now()) + '_' + "dwd script ended")
