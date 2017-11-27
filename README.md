@@ -1,10 +1,15 @@
 # dwd_cdc_h
-Download Weather Data --- Work in Progress ---
+Deutscher Wetter Dienst (DWD) _ Climate Data Center (CDC) _ hourly
 
-Script to gather the free climate hourly station observations
-from Deutscher Wetter (DWD) Dienst Climate Data Center (CDC)
+Script to gather latest climate station observations by ftp. 
+
+- Data is updated every hour, so you might want to schedule this script.
+
+- By default, the data gets stored in .json files split by sourcetype. 
 
 ## config
+Sourcetypes that get extracted
+
 
               'air_temperature_st': 'dwd:air:temperature:act:h',
               'cloudiness_st': 'dwd:cloudiness:act:h',
@@ -14,23 +19,24 @@ from Deutscher Wetter (DWD) Dienst Climate Data Center (CDC)
               'solar_st': 'dwd:solar:act:h',
               'sun_st': 'dwd:sun:act:h',
               'wind_st': 'dwd:wind:act:h',
-							
-              'scriptname': os.path.basename(__file__),
-              'ftp_local_storage': os.path.abspath(os.getcwd() + '\downloads'),
-              'json_local_storage': os.path.abspath(os.getcwd() + '\json'),
-              'lookup': os.path.abspath(os.getcwd() + '\lookup_fieldnames_DE.json'),
-              'filematch': '*.zip',
-              'ftp_host': 'ftp-cdc.dwd.de',
-							
+	      
+Paths and Urls, Filetypes
+
+              'ftp_local_storage':  where to store the downloaded zip files
+              'json_local_storage': and the json data files
+              'lookup': lookup_fieldnames_DE.json contains nice fieldnames in german
+              'ftp_host': dwd ftp url
+
+Functions
+
               'create_raw_dump': 'false',
               'create_names_dump': 'false',  # false, short, mid, long # not implemented yet
               'create_fields_dump': 'true',
-              'cleanup_before_perform': 'false',  # not implemented yet
-              'wrap_json': 'false'  # wrap data export into json array # not implemented yet
-
+              'cleanup_before_perform': 'false',  # not implemented yet             
 
 ## config_folders
-	      
+FTP folders to gather data from
+
 	      'air_temperature': '/pub/CDC/observations_germany/climate/hourly/air_temperature/recent/',
               'cloudiness': '/pub/CDC/observations_germany/climate/hourly/cloudiness/recent/',
               'precipitation': '/pub/CDC/observations_germany/climate/hourly/precipitation/recent/',
