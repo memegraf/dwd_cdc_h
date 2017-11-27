@@ -151,7 +151,6 @@ def dwd_main(config, config_folders):
     # go to folder where to store the downloads
     os.chdir(config['ftp_local_storage'])
 
-    datastore = {}
 
     # open ftp connection
     try:
@@ -163,6 +162,9 @@ def dwd_main(config, config_folders):
     # get all the 'zip' (default) files and extract weather data
     # for each configured sourcetype and folder
     for key in config_folders:
+
+        datastore = {}
+
         try:
             ftp.cwd(config_folders[key])
         except (RuntimeError, TypeError, NameError):
