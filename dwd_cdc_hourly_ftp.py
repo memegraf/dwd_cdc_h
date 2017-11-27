@@ -7,7 +7,7 @@
 
 
 import datetime
-import json
+import simplejson as json
 import logging
 import os
 import sys
@@ -25,19 +25,22 @@ def dwd_makenode(header, value):
 
 def dwd_extract_actual(dwd_file, key):
     # extract data from the zip files
+    dwd_data = {}
     with zipfile.ZipFile(dwd_file) as z:
         for filename in z.namelist():
-            if not os.path.isdir(filename):
-                dwd_data = {}
 
-                # station data
+            dwd_data['OriginalFilename'] = str(filename)
+            dwd_data['Read_Timestamp'] = str(datetime.datetime.now())
+
             if '.txt' in filename:
 
                 logging.debug('watching at file:')
                 logging.debug(filename)
 
-                # get station metadata
+                # in file *Stationsname* are some basic infos like location and name of the station
+                # we extract these from the first and last line of the file and create a node
                 if 'Metadaten_Stationsname_' in filename:
+
                     with z.open(filename) as f:
 
                         logging.debug('working at file:')
@@ -45,8 +48,10 @@ def dwd_extract_actual(dwd_file, key):
 
                         lines = f.read().decode('latin1').splitlines()
 
+                        # Station Header
                         dwd_data['Station_h'] = lines[0]
 
+                        # Station Data
                         c = len(lines) - 1
                         if ';' in lines[c]:
                             dwd_data['Station'] = lines[c]
@@ -55,8 +60,8 @@ def dwd_extract_actual(dwd_file, key):
                                 if ';' in lines[i]:
                                     dwd_data['Station'] = lines[i]
 
+                        # create node
                         try:
-
                             dwd_data['meta'] = dwd_makenode(dwd_data['Station_h'].replace(' ', ''),
                                                             dwd_data['Station'].replace(' ', ''))
                             logging.debug('meta: ' + str(dwd_data['meta']))
@@ -73,8 +78,10 @@ def dwd_extract_actual(dwd_file, key):
 
                         lines = f.read().decode('latin1').splitlines()
 
+                        # Header
                         dwd_data['header'] = lines[0]
 
+                        # Data
                         c = len(lines) - 1
                         if ';' in lines[c]:
                             dwd_data[key] = lines[c]
@@ -83,20 +90,18 @@ def dwd_extract_actual(dwd_file, key):
                                 if ';' in lines[i]:
                                     dwd_data[key] = lines[i]
 
+                        # create node
                         try:
                             dwd_data['data'] = dwd_makenode(dwd_data['header'].replace(' ', ''),
                                                             dwd_data[key].replace(' ', ''))
                             logging.debug('data: ' + str(dwd_data['data']))
                         except (RuntimeError, TypeError, NameError):
                             logging.error('can not make node' + str(sys.exc_info()))
-
-                dwd_data['OriginalFilename'] = str(filename)
-                dwd_data['Read_Timestamp'] = str(datetime.datetime.now())
     return dwd_data
 
 
 def dwd_send_event(dwd_event, config, sourcetype, key):
-    # lookup fieldnames
+    # lookup fieldnames, description, uom
     def get_names(fi):
         # named_data = {}
         lookup = open(fi)
@@ -108,18 +113,19 @@ def dwd_send_event(dwd_event, config, sourcetype, key):
     try:
         dwd_event['sourcetype'] = sourcetype
 
+        # add or remove data from the dict which gets exported
         if config['create_raw_dump'] == 'false':
             dwd_event.pop('Station', None)
             dwd_event.pop('header', None)
             dwd_event.pop('Station_h', None)
+            dwd_event.pop(key, None)
 
         if config['create_names_dump'] == 'true':
             dwd_event['named_data'] = get_names(config['lookup'])
 
         if config['create_fields_dump'] == 'false':
             dwd_event.pop('data', None)
-
-            dwd_event.pop(key, None)
+            dwd_event.pop('meta', None)
 
         # send single events
         # jdata = {'event': json.dumps(dwd_event)}
@@ -147,14 +153,15 @@ def dwd_main(config, config_folders):
 
     datastore = {}
 
-    # open up ftp connection
+    # open ftp connection
     try:
         ftp = FTP(config['ftp_host'])  # connect to host, default port
         ftp.login()  # user anonymous, passwd anonymous@
     except IOError:
         logging.error('ftp connection errrorrr' + str(sys.exc_info()))
 
-    # extract data for each configured folder in dwd_config_folders[]
+    # get all the 'zip' (default) files and extract weather data
+    # for each configured sourcetype and folder
     for key in config_folders:
         try:
             ftp.cwd(config_folders[key])
@@ -163,8 +170,7 @@ def dwd_main(config, config_folders):
         else:
             for filename in ftp.nlst(config['filematch']):
                 logging.debug('Processing ' + filename)
-                # mydata = []
-                # open file from ftp serveer
+                # open file from ftp server / folder
                 try:
                     fhandle = open(filename, 'wb')
                     # get files
@@ -173,23 +179,21 @@ def dwd_main(config, config_folders):
                 except(RuntimeError, TypeError, NameError):
                     logging.error('error while reading file' + str(sys.exc_info()))
                 else:
-                    # process file
+                    # process file and store its relevant contents into dict
                     try:
                         print(filename + str(key))
                         mydata = dwd_extract_actual(filename, key)
                     except(RuntimeError, TypeError, NameError):
-                        logging.error(
-                            str('error while processing file' + str(sys.exc_info())))
+                        logging.error(str('error while processing file' + str(sys.exc_info())))
                     else:
-                        # create json and send or save data as event
+                        # send data as events and store in dictionary to do some batch processing later
                         try:
-                            # helper.log_debug(mydata)
                             datastore[filename] = dwd_send_event(mydata, config, config[key + '_st'], str(key))
                         except(RuntimeError, TypeError, NameError):
-                            logging.error(
-                                str('error while sending file' + str(sys.exc_info())))
+                            logging.error(str('error while sending file' + str(sys.exc_info())))
         finally:
             try:
+                # do batch saving into json files for each sourcetype
                 with open(os.path.abspath(config['json_local_storage'] + '/' + key + '.json'), 'w') as myfile:
                     myfile.write(json.dumps(datastore))
             except IOError:
@@ -211,9 +215,9 @@ def validate_input():
               'wind_st': 'dwd:wind:act:h',
               # basic config
               'scriptname': os.path.basename(__file__),
-              'ftp_local_storage': os.path.abspath(os.getcwd() + '\downloads'),
-              'json_local_storage': os.path.abspath(os.getcwd() + '\json'),
-              'lookup': os.path.abspath(os.getcwd() + '\lookup_fieldnames_DE.json'),
+              'ftp_local_storage': os.path.abspath(os.getcwd() + '/downloads'),
+              'json_local_storage': os.path.abspath(os.getcwd() + '/json'),
+              'lookup': os.path.abspath(os.getcwd() + '/lookup_fieldnames_DE.json'),
               'filematch': '*.zip',
               'ftp_host': 'ftp-cdc.dwd.de',
               # function selection
@@ -236,9 +240,9 @@ def validate_input():
 
 
 # start working
+ds = str(datetime.datetime.now()).replace('-', '').replace(':', '').replace('.', '')
 LOG_FILENAME = os.path.abspath(
-    os.getcwd() + '\log' + '/' + str(datetime.datetime.now()).replace('-',
-                                                                      '').replace(':', '') + '_' + 'log.log')
+    os.getcwd() + '/log' + '/' + ds + '.log')
 logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG)
 logging.info(str(datetime.datetime.now()) + '_' + "dwd script started")
 
