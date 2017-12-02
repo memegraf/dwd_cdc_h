@@ -58,10 +58,16 @@ example output
         }
 
 ## install
-pip install simplejson
+
+assuming you have python 2.7 with pip:
+
+	pip install simplejson
+	cd <a folder>
+	git clone https://github.com/memegraf/dwd_cdc_h.git
 
 ## run
-python dwd_cdc_hourly_ftp.py
+	cd <a folder>
+	python dwd_cdc_hourly_ftp.py
 
 ## config
 configuration is done within the scipt. 
