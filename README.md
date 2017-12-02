@@ -60,11 +60,11 @@ example output
 ## install
 pip install simplejson
 
-## config
-configuration is done within the scipt. 
-
 ## run
 python dwd_cdc_hourly_ftp.py
+
+## config
+configuration is done within the scipt. 
 
 Sourcetypes (type of the data, like temperature, pressure) that get extracted
 
