@@ -104,4 +104,9 @@ ENV/
 /downloads
 /json
 /log
+.notes
+.idea/
+
+
+
 

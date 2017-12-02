@@ -24,7 +24,7 @@ def dwd_makenode(header, value):
 
 
 def dwd_extract_actual(dwd_file, key):
-    # extract data from the zip files
+    # extract data from the zip files and return extracted info as dict
     dwd_data = {}
     with zipfile.ZipFile(dwd_file) as z:
         for filename in z.namelist():
@@ -38,7 +38,7 @@ def dwd_extract_actual(dwd_file, key):
                 logging.debug(filename)
 
                 # in file *Stationsname* are some basic infos like location and name of the station
-                # we extract these from the first and last line of the file and create a node
+                # we extract these from the first and last (usually) line of the file and return a node
                 if 'Metadaten_Stationsname_' in filename:
 
                     with z.open(filename) as f:
@@ -57,7 +57,7 @@ def dwd_extract_actual(dwd_file, key):
                             dwd_data['Station'] = lines[c]
                         else:
                             for i in lines:
-                                if ';' in lines[i]:
+                                if ';' in lines[i] and i != 0:
                                     dwd_data['Station'] = lines[i]
 
                         # create node
@@ -87,7 +87,7 @@ def dwd_extract_actual(dwd_file, key):
                             dwd_data[key] = lines[c]
                         else:
                             for i in lines:
-                                if ';' in lines[i]:
+                                if ';' in lines[i] and i != 0:
                                     dwd_data[key] = lines[i]
 
                         # create node
@@ -108,6 +108,7 @@ def dwd_send_event(dwd_event, config, sourcetype, key):
         named_data = json.loads(lookup.read())
         return named_data
 
+    # data store, given back to caller for batch saving
     datastore = []
 
     try:
@@ -141,16 +142,9 @@ def dwd_send_event(dwd_event, config, sourcetype, key):
         return datastore
 
 
-def dwd_cleanup():
-    # clear log, datafiles and downloads
-    logging.debug('cleanup: ')
-    pass
-
-
 def dwd_main(config, config_folders):
     # go to folder where to store the downloads
     os.chdir(config['ftp_local_storage'])
-
 
     # open ftp connection
     try:
@@ -159,39 +153,39 @@ def dwd_main(config, config_folders):
     except IOError:
         logging.error('ftp connection errrorrr' + str(sys.exc_info()))
 
-    # get all the 'zip' (default) files and extract weather data
-    # for each configured sourcetype and folder
+    # get all the 'zip' (default) files and extract weather data by configured sourcetype
     for key in config_folders:
 
+        # holds the data for each sourcetype
         datastore = {}
 
         try:
             ftp.cwd(config_folders[key])
-        except (RuntimeError, TypeError, NameError):
+        except (TypeError, NameError):
             logging.error('can not switch ftp directory' + str(sys.exc_info()))
         else:
             for filename in ftp.nlst(config['filematch']):
-                logging.debug('Processing ' + filename)
+                logging.info('filename ' + filename)
                 # open file from ftp server / folder
                 try:
                     fhandle = open(filename, 'wb')
                     # get files
                     ftp.retrbinary('RETR ' + filename, fhandle.write)
                     fhandle.close()
-                except(RuntimeError, TypeError, NameError):
+                except(TypeError, NameError):
                     logging.error('error while reading file' + str(sys.exc_info()))
                 else:
                     # process file and store its relevant contents into dict
                     try:
-                        print(filename + str(key))
+                        logging.info("sourcetype:" + str(key))
                         mydata = dwd_extract_actual(filename, key)
-                    except(RuntimeError, TypeError, NameError):
+                    except(TypeError, NameError):
                         logging.error(str('error while processing file' + str(sys.exc_info())))
                     else:
-                        # send data as events and store in dictionary to do some batch processing later
+                        # send data as events and store these events in dictionary to do some batch processing later
                         try:
                             datastore[filename] = dwd_send_event(mydata, config, config[key + '_st'], str(key))
-                        except(RuntimeError, TypeError, NameError):
+                        except(TypeError, NameError):
                             logging.error(str('error while sending file' + str(sys.exc_info())))
         finally:
             try:
@@ -238,21 +232,39 @@ def validate_input():
                       'sun': '/pub/CDC/observations_germany/climate/hourly/sun/recent/',
                       'wind': '/pub/CDC/observations_germany/climate/hourly/wind/recent/'}
 
+    # create folders
+
+    local_folders = {k: v for k, v in config.iteritems() if '_local_storage' in k}
+    for key in local_folders:
+        try:
+            os.makedirs(local_folders[key])
+        except OSError:
+            if not os.path.isdir(local_folders[key]):
+                raise
+
     return config, config_folders
 
 
 # start working
-ds = str(datetime.datetime.now()).replace('-', '').replace(':', '').replace('.', '')
-LOG_FILENAME = os.path.abspath(
-    os.getcwd() + '/log' + '/' + ds + '.log')
-logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG)
-logging.info(str(datetime.datetime.now()) + '_' + "dwd script started")
 
+# set up logging
+ds = str(datetime.datetime.now()).replace('-', '').replace(':', '').replace('.', '')
+LOG_FILENAME = os.path.abspath(os.getcwd() + '/log' + '/' + ds + '.log')
+try:
+    os.makedirs(os.path.dirname(LOG_FILENAME))
+except OSError:
+    if not os.path.isdir(os.path.dirname(LOG_FILENAME)):
+        raise
+
+logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO)
+
+logging.info(str(datetime.datetime.now()) + '_' + "dwd script started")
 # get & set config
 dwd_config, dwd_config_folders = validate_input()
 
-logging.info(str(datetime.datetime.now()) + '_' + 'config=' + json.dumps(dwd_config))
-logging.info(str(datetime.datetime.now()) + '_' + 'datasources=' + json.dumps(dwd_config_folders))
+#log config values
+logging.debug(str(datetime.datetime.now()) + '_' + 'config=' + json.dumps(dwd_config))
+logging.debug(str(datetime.datetime.now()) + '_' + 'datasources=' + json.dumps(dwd_config_folders))
 
 dwd_main(dwd_config, dwd_config_folders)
 
