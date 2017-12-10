@@ -100,6 +100,9 @@ def dwd_extract_station_observation(dwd_file, key):
                             logging.debug('data: ' + str(dwd_data['data']))
                         except (RuntimeError, TypeError, NameError):
                             logging.error('can not make node' + str(sys.exc_info()))
+
+    logging.debug('dwd_extract_station_observation dwd_data : ' + json.dumps(dwd_data))
+
     return dwd_data
 
 
@@ -107,6 +110,8 @@ def dwd_extract_radio(dwd_file, key):
     # extract data from the tar.gz files and return extracted info as dict
 
     # http://wradlib.org/wradlib-docs/0.9.0/notebooks/radolan/radolan_quickstart.html
+
+    #http: // wradlib.org / wradlib - docs / latest / notebooks / fileio / wradlib_radar_formats.html  # German-Weather-Service:-RADOLAN-(quantitative)-composit
 
     dwd_data = {}
 
@@ -135,34 +140,48 @@ def dwd_send_event(dwd_event, config, sourcetype, key):
     # data store, given back to caller for batch saving
     datastore = []
 
+    logging.debug('dwd_send_event dwd_event: ' + json.dumps(dwd_event))
+    logging.debug('dwd_send_event sourcetype : ' + sourcetype)
+
     try:
         dwd_event['sourcetype'] = sourcetype
-
+        logging.debug('prepare export')
+        #print(config['create_raw_dump'])
         # add or remove data from the dict which gets exported
-        if config['create_raw_dump'] == 'false':
+        logging.debug('dwd_send_event config raw dump : ' + str(config['create_raw_dump']))
+        if config['create_raw_dump'] == 'False':
             dwd_event.pop('Station', None)
             dwd_event.pop('header', None)
             dwd_event.pop('Station_h', None)
             dwd_event.pop(key, None)
 
-        if config['create_names_dump'] == 'True':
+        logging.debug('dwd_send_event config names dump : ' + str(config['create_names_dump']))
+        if config['create_names_dump'] :
             dwd_event['named_data'] = get_names(config['lookup'])
 
-        if config['create_fields_dump'] == 'false':
+        print(config['create_fields_dump'])
+        logging.debug('dwd_send_event config fields dump : ' + str(config['create_fields_dump']))
+
+        if not config['create_fields_dump']:
             dwd_event.pop('data', None)
             dwd_event.pop('meta', None)
 
-        if config['create_radio_dump'] == 'True':
+        logging.debug('dwd_send_event config radio dump : ' + str(config['create_radio_dump']))
+        if config['create_radio_dump'] :
             dwd_event.pop('data', None)
             dwd_event.pop('meta', None)
 
         # send single events
         # jdata = {'event': json.dumps(dwd_event)}
 
+
+
         # append to list for batch export
         datastore.append(dwd_event)
 
-    except IOError:
+        logging.debug('dwd_send_event datastore : ' + json.dumps(dwd_event))
+
+    except :
         logging.error('file error while writing event' + str(sys.exc_info()))
     else:
         logging.debug('wrote event: ' + json.dumps(dwd_event))
@@ -211,9 +230,11 @@ def dwd_main(config, config_folders):
 
                         if filename.endswith('.zip'):
                             mydata = dwd_extract_station_observation(filename, key)
+                            logging.debug('dwd main mydata : ' + json.dumps(mydata))
 
-                        if filename.endswith('.tar.gz'):
-                            mydata = dwd_extract_radio(filename,key)
+                        #if filename.endswith('.tar.gz'):
+                        #   mydata = dwd_extract_radio(filename,key)
+                        #    logging.debug('dwdmain mydata : ' + json.dumps(mydata))
 
                     except(TypeError, NameError):
                         logging.error(str('error while processing file ' + str(sys.exc_info())))
@@ -221,6 +242,9 @@ def dwd_main(config, config_folders):
                         # send data as events and store these events in dictionary to do some batch processing later
                         try:
                             datastore[filename] = dwd_send_event(mydata, config, config[key + '_st'], str(key))
+
+                            logging.debug('dwd main datatore filename : ' + json.dumps(datastore[filename]))
+
                         except(TypeError, NameError):
                             logging.error(str('error while sending file ' + str(sys.exc_info())))
         finally:
@@ -248,17 +272,16 @@ def get_config():
         'create_raw_dump': local_conf.getboolean("functions", "create_raw_dump"),
         'create_names_dump': local_conf.getboolean("functions", "create_names_dump"),
         'create_fields_dump': local_conf.getboolean("functions", "create_fields_dump"),
+        'create_radio_dump': local_conf.getboolean("functions", "create_radio_dump"),
     }
 
     #add sourcetype to general config store
     config.update(dict(local_conf.items('sourcetypes')))
 
-
     #getting ftp folders
     config_folders = dict(local_conf.items("ftp_folders"))
-    print("hi")
-    print(dict(local_conf.items('ftp_folders')))
 
+    # create local folders to store data
     local_folders = {k: v for k, v in config.iteritems() if '_local_storage' in k}
     for key in local_folders:
         try:
@@ -270,7 +293,12 @@ def get_config():
     return config, config_folders
 
 
-# start working
+########################################################################################################################
+#
+#
+#
+########################################################################################################################
+
 
 # set up logging
 ds = str(datetime.datetime.now()).replace('-', '').replace(':', '').replace('.', '')
@@ -284,13 +312,15 @@ except OSError:
 logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG)
 
 logging.info(str(datetime.datetime.now()) + '_' + "dwd script started")
+
 # get & set config
 dwd_config, dwd_config_folders = get_config()
 
-#log config values
+# log config values
 logging.debug(str(datetime.datetime.now()) + '_' + 'config=' + json.dumps(dwd_config))
 logging.debug(str(datetime.datetime.now()) + '_' + 'datasources=' + json.dumps(dwd_config_folders))
 
+# start working
 dwd_main(dwd_config, dwd_config_folders)
 
 logging.info(str(datetime.datetime.now()) + '_' + "dwd script ended")
