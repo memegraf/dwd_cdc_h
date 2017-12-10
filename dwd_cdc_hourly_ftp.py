@@ -13,6 +13,9 @@ import os
 import sys
 import zipfile
 from ftplib import FTP
+import re
+import tarfile
+import ConfigParser
 
 
 def dwd_makenode(header, value):
@@ -23,7 +26,7 @@ def dwd_makenode(header, value):
     return data
 
 
-def dwd_extract_actual(dwd_file, key):
+def dwd_extract_station_observation(dwd_file, key):
     # extract data from the zip files and return extracted info as dict
     dwd_data = {}
     with zipfile.ZipFile(dwd_file) as z:
@@ -100,6 +103,27 @@ def dwd_extract_actual(dwd_file, key):
     return dwd_data
 
 
+def dwd_extract_radio(dwd_file, key):
+    # extract data from the tar.gz files and return extracted info as dict
+
+    # http://wradlib.org/wradlib-docs/0.9.0/notebooks/radolan/radolan_quickstart.html
+
+    dwd_data = {}
+
+    print(dwd_file + key)
+
+    tar = tarfile.open(dwd_file, "r:gz")
+    for tarinfo in tar:
+        print tarinfo.name, "is", tarinfo.size, "bytes in size and is",
+        if tarinfo.isreg():
+            print "a regular file."
+        elif tarinfo.isdir():
+            print "a directory."
+        else:
+            print "something else."
+    tar.close()
+
+
 def dwd_send_event(dwd_event, config, sourcetype, key):
     # lookup fieldnames, description, uom
     def get_names(fi):
@@ -121,10 +145,14 @@ def dwd_send_event(dwd_event, config, sourcetype, key):
             dwd_event.pop('Station_h', None)
             dwd_event.pop(key, None)
 
-        if config['create_names_dump'] == 'true':
+        if config['create_names_dump'] == 'True':
             dwd_event['named_data'] = get_names(config['lookup'])
 
         if config['create_fields_dump'] == 'false':
+            dwd_event.pop('data', None)
+            dwd_event.pop('meta', None)
+
+        if config['create_radio_dump'] == 'True':
             dwd_event.pop('data', None)
             dwd_event.pop('meta', None)
 
@@ -162,10 +190,12 @@ def dwd_main(config, config_folders):
         try:
             ftp.cwd(config_folders[key])
         except (TypeError, NameError):
-            logging.error('can not switch ftp directory' + str(sys.exc_info()))
+            logging.error('can not switch ftp directory ' + str(sys.exc_info()))
         else:
-            for filename in ftp.nlst(config['filematch']):
-                logging.info('filename ' + filename)
+
+            for filename in ftp.nlst():
+                logging.info('filename: ' + filename)
+
                 # open file from ftp server / folder
                 try:
                     fhandle = open(filename, 'wb')
@@ -173,20 +203,26 @@ def dwd_main(config, config_folders):
                     ftp.retrbinary('RETR ' + filename, fhandle.write)
                     fhandle.close()
                 except(TypeError, NameError):
-                    logging.error('error while reading file' + str(sys.exc_info()))
+                    logging.error('error while reading file ' + str(sys.exc_info()))
                 else:
                     # process file and store its relevant contents into dict
                     try:
                         logging.info("sourcetype:" + str(key))
-                        mydata = dwd_extract_actual(filename, key)
+
+                        if filename.endswith('.zip'):
+                            mydata = dwd_extract_station_observation(filename, key)
+
+                        if filename.endswith('.tar.gz'):
+                            mydata = dwd_extract_radio(filename,key)
+
                     except(TypeError, NameError):
-                        logging.error(str('error while processing file' + str(sys.exc_info())))
+                        logging.error(str('error while processing file ' + str(sys.exc_info())))
                     else:
                         # send data as events and store these events in dictionary to do some batch processing later
                         try:
                             datastore[filename] = dwd_send_event(mydata, config, config[key + '_st'], str(key))
                         except(TypeError, NameError):
-                            logging.error(str('error while sending file' + str(sys.exc_info())))
+                            logging.error(str('error while sending file ' + str(sys.exc_info())))
         finally:
             try:
                 # do batch saving into json files for each sourcetype
@@ -196,43 +232,32 @@ def dwd_main(config, config_folders):
                 logging.error('can not save datafile' + str(sys.exc_info()))
 
 
-def validate_input():
-    # todo:
-    #   - move settings to config file
-    #   - validate inputs :-)
+def get_config():
 
-    config = {'air_temperature_st': 'dwd:air:temperature:act:h',
-              'cloudiness_st': 'dwd:cloudiness:act:h',
-              'precipitation_st': 'dwd:precipitation:act:h',
-              'pressure_st': 'dwd:pressure:act:h',
-              'soil_temperature_st': 'dwd:soil:temperature:act:h',
-              'solar_st': 'dwd:solar:act:h',
-              'sun_st': 'dwd:sun:act:h',
-              'wind_st': 'dwd:wind:act:h',
-              # basic config
-              'scriptname': os.path.basename(__file__),
-              'ftp_local_storage': os.path.abspath(os.getcwd() + '/downloads'),
-              'json_local_storage': os.path.abspath(os.getcwd() + '/json'),
-              'lookup': os.path.abspath(os.getcwd() + '/lookup_fieldnames_DE.json'),
-              'filematch': '*.zip',
-              'ftp_host': 'ftp-cdc.dwd.de',
-              # function selection
-              'create_raw_dump': 'false',
-              'create_names_dump': 'false',  # false, short, mid, long # not implemented yet
-              'create_fields_dump': 'true',
-              'cleanup_before_perform': 'false',  # not implemented yet
-              }
+    # read configuration file and set defaults
+    local_conf = ConfigParser.SafeConfigParser()
 
-    config_folders = {'air_temperature': '/pub/CDC/observations_germany/climate/hourly/air_temperature/recent/',
-                      'cloudiness': '/pub/CDC/observations_germany/climate/hourly/cloudiness/recent/',
-                      'precipitation': '/pub/CDC/observations_germany/climate/hourly/precipitation/recent/',
-                      'pressure': '/pub/CDC/observations_germany/climate/hourly/pressure/recent/',
-                      'soil_temperature': '/pub/CDC/observations_germany/climate/hourly/soil_temperature/recent/',
-                      'solar': '/pub/CDC/observations_germany/climate/hourly/solar/',
-                      'sun': '/pub/CDC/observations_germany/climate/hourly/sun/recent/',
-                      'wind': '/pub/CDC/observations_germany/climate/hourly/wind/recent/'}
+    local_conf.read('local.conf')
 
-    # create folders
+    config = {
+        'scriptname': os.path.basename(__file__),
+        'ftp_local_storage': os.path.abspath(os.getcwd() + str(local_conf.get('folders', 'ftp_local_storage'))),
+        'json_local_storage': os.path.abspath(os.getcwd() + str(local_conf.get('folders', 'json_local_storage'))),
+        'lookup': os.path.abspath(os.getcwd() + str(local_conf.get('folders', 'lookup'))),
+        'ftp_host': local_conf.get('ftp', 'ftp_host'),
+        'create_raw_dump': local_conf.getboolean("functions", "create_raw_dump"),
+        'create_names_dump': local_conf.getboolean("functions", "create_names_dump"),
+        'create_fields_dump': local_conf.getboolean("functions", "create_fields_dump"),
+    }
+
+    #add sourcetype to general config store
+    config.update(dict(local_conf.items('sourcetypes')))
+
+
+    #getting ftp folders
+    config_folders = dict(local_conf.items("ftp_folders"))
+    print("hi")
+    print(dict(local_conf.items('ftp_folders')))
 
     local_folders = {k: v for k, v in config.iteritems() if '_local_storage' in k}
     for key in local_folders:
@@ -256,11 +281,11 @@ except OSError:
     if not os.path.isdir(os.path.dirname(LOG_FILENAME)):
         raise
 
-logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO)
+logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG)
 
 logging.info(str(datetime.datetime.now()) + '_' + "dwd script started")
 # get & set config
-dwd_config, dwd_config_folders = validate_input()
+dwd_config, dwd_config_folders = get_config()
 
 #log config values
 logging.debug(str(datetime.datetime.now()) + '_' + 'config=' + json.dumps(dwd_config))

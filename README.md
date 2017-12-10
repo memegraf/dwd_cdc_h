@@ -114,5 +114,7 @@ FTP folders to gather data from
 - [ ] move config to file
 - [ ] do input validation
 - [ ] implement lookup for nice fieldnames and merge with measurements
+- [ ] download radio data
+- [ ] convert radio data
 
 
