@@ -136,6 +136,8 @@ config options:
     
         
     # Switch functionallity
+    # these actually mainly just deletes the extracted data from the output. 
+    # all extracts are configured in sourcetypes and ftp_folders.
     [functions]
     create_raw_dump = false # return comma seperated lines from the source files
     create_names_dump = false   # add nice fieldnames, based on lookup_fieldnames_<LANGUAGE>.json
