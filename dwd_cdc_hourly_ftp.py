@@ -16,7 +16,7 @@ from ftplib import FTP
 import re
 import tarfile
 import ConfigParser
-
+import time
 
 def dwd_makenode(header, value):
     logging.debug('making nodes')
@@ -190,6 +190,26 @@ def dwd_send_event(dwd_event, config, sourcetype, key):
 
 
 def dwd_main(config, config_folders):
+
+    # get last run
+    def get_last_run(key, config):
+        try:
+            lr = open(key + config['last_run_file'])
+            last_run = float(lr.read().readline())
+        except IOError:
+            last_run = config['this_run']
+
+        logging.debug('get last run  : ' + str(last_run))
+
+        if (last_run - config['this_run']) < 6000 :
+            older1h = bool(1)
+        else :
+            older1h = bool(0)
+
+        logging.debug(last_run - config['this_run'])
+
+        return older1h
+
     # go to folder where to store the downloads
     os.chdir(config['ftp_local_storage'])
 
@@ -203,57 +223,68 @@ def dwd_main(config, config_folders):
     # get all the 'zip' (default) files and extract weather data by configured sourcetype
     for key in config_folders:
 
-        # holds the data for each sourcetype
-        datastore = {}
+        older1h=get_last_run(key,config)
 
-        try:
-            ftp.cwd(config_folders[key])
-        except (TypeError, NameError):
-            logging.error('can not switch ftp directory ' + str(sys.exc_info()))
-        else:
+        # only run if the last run is longer ago then 1 hour, if wanted
+        if older1h and config['check_against_last_run']:
 
-            for filename in ftp.nlst():
-                logging.info('filename: ' + filename)
+            # holds the data for each sourcetype
+            datastore = {}
 
-                # open file from ftp server / folder
-                try:
-                    fhandle = open(filename, 'wb')
-                    # get files
-                    ftp.retrbinary('RETR ' + filename, fhandle.write)
-                    fhandle.close()
-                except(TypeError, NameError):
-                    logging.error('error while reading file ' + str(sys.exc_info()))
-                else:
-                    # process file and store its relevant contents into dict
+            try:
+                ftp.cwd(config_folders[key])
+            except (TypeError, NameError):
+                logging.error('can not switch ftp directory ' + str(sys.exc_info()))
+            else:
+
+                for filename in ftp.nlst():
+                    logging.info('filename: ' + filename)
+
+                    # open file from ftp server / folder
                     try:
-                        logging.info("sourcetype:" + str(key))
-
-                        if filename.endswith('.zip'):
-                            mydata = dwd_extract_station_observation(filename, key)
-                            logging.debug('dwd main mydata : ' + json.dumps(mydata))
-
-                        #if filename.endswith('.tar.gz'):
-                        #   mydata = dwd_extract_radio(filename,key)
-                        #    logging.debug('dwdmain mydata : ' + json.dumps(mydata))
-
+                        fhandle = open(filename, 'wb')
+                        # get files
+                        ftp.retrbinary('RETR ' + filename, fhandle.write)
+                        fhandle.close()
                     except(TypeError, NameError):
-                        logging.error(str('error while processing file ' + str(sys.exc_info())))
+                        logging.error('error while reading file ' + str(sys.exc_info()))
                     else:
-                        # send data as events and store these events in dictionary to do some batch processing later
+                        # process file and store its relevant contents into dict
                         try:
-                            datastore[filename] = dwd_send_event(mydata, config, config[key + '_st'], str(key))
+                            logging.info("sourcetype:" + str(key))
 
-                            logging.debug('dwd main datatore filename : ' + json.dumps(datastore[filename]))
+                            if filename.endswith('.zip'):
+                                mydata = dwd_extract_station_observation(filename, key)
+                                logging.debug('dwd main mydata : ' + json.dumps(mydata))
+
+                            if filename.endswith('.tar.gz'):
+                               mydata = dwd_extract_radio(filename,key)
+                               logging.debug('dwdmain mydata : ' + json.dumps(mydata))
 
                         except(TypeError, NameError):
-                            logging.error(str('error while sending file ' + str(sys.exc_info())))
-        finally:
-            try:
-                # do batch saving into json files for each sourcetype
-                with open(os.path.abspath(config['json_local_storage'] + '/' + key + '.json'), 'w') as myfile:
-                    myfile.write(json.dumps(datastore))
-            except IOError:
-                logging.error('can not save datafile' + str(sys.exc_info()))
+                            logging.error(str('error while processing file ' + str(sys.exc_info())))
+                        else:
+                            # send data as events and store these events in dictionary to do some batch processing later
+                            try:
+                                datastore[filename] = dwd_send_event(mydata, config, config[key + '_st'], str(key))
+
+                                logging.debug('dwd main datatore filename : ' + json.dumps(datastore[filename]))
+
+                            except(TypeError, NameError):
+                                logging.error(str('error while sending file ' + str(sys.exc_info())))
+            finally:
+                try:
+                    # do batch saving into json files for each sourcetype
+                    with open(os.path.abspath(config['json_local_storage'] + '/' + key + '.json'), 'w') as myfile:
+                        myfile.write(json.dumps(datastore))
+
+                    # save last run file
+                    with open(os.path.abspath(key + config['last_run_file']), 'w') as myfile:
+                        myfile.write(str(time.time()))
+
+                except IOError:
+                    logging.error('can not save datafile' + str(sys.exc_info()))
+
 
 
 def get_config():
@@ -273,6 +304,9 @@ def get_config():
         'create_names_dump': local_conf.getboolean("functions", "create_names_dump"),
         'create_fields_dump': local_conf.getboolean("functions", "create_fields_dump"),
         'create_radio_dump': local_conf.getboolean("functions", "create_radio_dump"),
+        'last_run_file': local_conf.get('folders', 'last_run_file'),
+        'this_run': float(time.time()),
+        'check_against_last_run': local_conf.getboolean("functions", "check_against_last_run")
     }
 
     #add sourcetype to general config store
@@ -299,6 +333,7 @@ def get_config():
 #
 ########################################################################################################################
 
+print ("start")
 
 # set up logging
 ds = str(datetime.datetime.now()).replace('-', '').replace(':', '').replace('.', '')
@@ -324,3 +359,5 @@ logging.debug(str(datetime.datetime.now()) + '_' + 'datasources=' + json.dumps(d
 dwd_main(dwd_config, dwd_config_folders)
 
 logging.info(str(datetime.datetime.now()) + '_' + "dwd script ended")
+
+print ("end")
