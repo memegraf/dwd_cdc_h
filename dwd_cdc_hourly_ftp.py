@@ -10,10 +10,11 @@ from ftplib import FTP
 import traceback
 
 from dwd_cdc_core import *
-from dwd_cdc_radio import *
+
+#from dwd_cdc_radio import *
 
 
-def dwd_main(config, config_folders):
+def main(config, config_folders):
     """ runs through the ftp folder, downloads files, extracts infos and creates output"""
     # go to folder where to store the downloads
     os.chdir(config['ftp_local_storage'])
@@ -29,12 +30,13 @@ def dwd_main(config, config_folders):
     for key in config_folders:
 
         # only run if the last run is longer ago then 1 hour, or just run
-        ok_run = bool(0)
+        ok_run = bool(1)
         if config['check_against_last_run']:
             older1h = get_last_run(key, config)
             if older1h:
                 ok_run=bool(1)
 
+        print('run: ' + str(ok_run))
         if ok_run:
             # holds the data for each sourcetype
             datastore = {}
@@ -123,13 +125,14 @@ logging.info(str(datetime.datetime.now()) + '_' + "dwd script started")
 
 # get & set config
 dwd_config, dwd_config_folders = get_config()
+print(dwd_config)
 
 # log config values
 logging.debug(str(datetime.datetime.now()) + '_' + 'config=' + json.dumps(dwd_config))
 logging.debug(str(datetime.datetime.now()) + '_' + 'datasources=' + json.dumps(dwd_config_folders))
 
 # start working
-dwd_main(dwd_config, dwd_config_folders)
+main(dwd_config, dwd_config_folders)
 
 logging.info(str(datetime.datetime.now()) + '_' + "dwd script ended")
 print ("end")

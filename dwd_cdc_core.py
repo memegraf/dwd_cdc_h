@@ -178,31 +178,37 @@ def dwd_make_event(dwd_event, config, sourcetype, key):
 
 def get_config():
 
+
     # read configuration file and set defaults
-    local_conf = ConfigParser.SafeConfigParser()
+    actual_config = ConfigParser.SafeConfigParser()
+    default_config = ConfigParser.SafeConfigParser()
 
-    local_conf.read('local.conf')
+    actual_config.read('local.conf')
+    default_config.read('default.conf')
 
+    actual_config = default_config
+
+    print(str(actual_config))
     config = {
         'scriptname': os.path.basename(__file__),
-        'ftp_local_storage': os.path.abspath(os.getcwd() + str(local_conf.get('folders', 'ftp_local_storage'))),
-        'json_local_storage': os.path.abspath(os.getcwd() + str(local_conf.get('folders', 'json_local_storage'))),
-        'lookup': os.path.abspath(os.getcwd() + str(local_conf.get('folders', 'lookup'))),
-        'ftp_host': local_conf.get('ftp', 'ftp_host'),
-        'create_raw_dump': local_conf.getboolean("functions", "create_raw_dump"),
-        'create_names_dump': local_conf.getboolean("functions", "create_names_dump"),
-        'create_fields_dump': local_conf.getboolean("functions", "create_fields_dump"),
-        'create_radio_dump': local_conf.getboolean("functions", "create_radio_dump"),
-        'last_run_file': local_conf.get('folders', 'last_run_file'),
+        'ftp_local_storage': os.path.abspath(os.getcwd() + str(actual_config.get('folders', 'ftp_local_storage'))),
+        'json_local_storage': os.path.abspath(os.getcwd() + str(actual_config.get('folders', 'json_local_storage'))),
+        'lookup': os.path.abspath(os.getcwd() + str(actual_config.get('folders', 'lookup'))),
+        'ftp_host': actual_config.get('ftp', 'ftp_host'),
+        'create_raw_dump': actual_config.getboolean("functions", "create_raw_dump"),
+        'create_names_dump': actual_config.getboolean("functions", "create_names_dump"),
+        'create_fields_dump': actual_config.getboolean("functions", "create_fields_dump"),
+        'create_radio_dump': actual_config.getboolean("functions", "create_radio_dump"),
+        'last_run_file': actual_config.get('folders', 'last_run_file'),
         'this_run': float(time.time()),
-        'check_against_last_run': local_conf.getboolean("functions", "check_against_last_run")
+        'check_against_last_run': actual_config.getboolean("functions", "check_against_last_run")
     }
 
     #add sourcetype to general config store
-    config.update(dict(local_conf.items('sourcetypes')))
+    config.update(dict(actual_config.items('sourcetypes')))
 
     #getting ftp folders
-    config_folders = dict(local_conf.items("ftp_folders"))
+    config_folders = dict(actual_config.items("ftp_folders"))
 
     # create local folders to store data
     local_folders = {k: v for k, v in config.iteritems() if '_local_storage' in k}
