@@ -66,14 +66,54 @@ example output
         }
 
 ## install
-see dwd_install.sh
+download, install anaconda with python2.7 
+
+Install dependencies and configure, exchange paths
+
+### windows set environment, optional
+    setx.exe PYTHONPATH C:\Users\DAWx\Anaconda2
+    set PATH=%PATH%;C:\Users\DAWx\Anaconda2
+
+### create virtual env
+    conda create --name dwd_cdc_h python=2.7
+    conda config --add channels conda-forge
+
+### linux activate virtual env
+    source activate dwd_cdc_h
+
+### windows activate virtual env
+    activate dwd_cdc_h
+
+### install packages
+    conda install wradlib
+    conda install simplejson
+
+### linux check and set path of gdal
+    export GDAL_DATA=/path/to/anaconda/envs/dwd_cdc_h/share/gdal
+
+### windows check and set path of gdal
+    setx GDAL_DATA C:\Users\DAWx\Anaconda2\envs\dwd_cdc_h\Library\share\gdal
+
+### test
+    # on windows use the anaconda console
+    python
+    import wradlib
+
+### additionally 
+dowload wradlib source with examples and
+install jupyter for the wradlib examples
+https://github.com/wradlib/wradlib
+
+    conda install jupyter
+    jupyter nbconvert --to script C:\Users\DAWx\Downloads\wradlib-master\notebooks\radolan\radolan_quickstart.ipynb
+       
 
 ## config
 configuration is done in file local.conf. 
 
 
 
- The chapter ftp_folder and chapter sourcetypes are dependent on each other. these must get set according to the
+ The sector ftp_folder and sector sourcetypes are dependent on each other. these must get set according to the
  functionality switches
 
 example settings to gather radiolan data and plot images:
