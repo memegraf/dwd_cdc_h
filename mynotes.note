@@ -1,0 +1,57 @@
+
+# if in windows path variable
+set PATH=%PATH%;C:\Python27\Lib;C:\Python27\DLLs;C:\Python27\Lib\lib-tk;C:\Python27\Scripts;C:\Program Files\GDAL
+
+pip install numpy
+pip install wradlib
+pip install matplotlib
+pip install scipy
+pip install h5py
+pip install netCDF4
+
+#https://sandbox.idre.ucla.edu/sandbox/tutorials/installing-gdal-for-windows
+#https://www.microsoft.com/en-us/download/details.aspx?id=44266
+#or pip install gdal
+#https://pypi.python.org/pypi/GDAL
+#https://gis.stackexchange.com/questions/82977/is-it-possible-to-use-gdal-without-admin-rights/83297#83297
+
+set PATH=%PATH%;C:\Program Files\GDAL
+benutzervariable
+GDAL_DATA mit wert C:\Program Files\GDAL\gdal-data
+
+neustarten
+
+testen:
+
+gdalinfo --version
+
+
+
+ODER
+
+Install dependencies and configure
+
+[windows]
+setx.exe PYTHONPATH C:\Users\DAWx\Anaconda2
+set PATH=%PATH%;C:\Users\DAWx\Anaconda2
+
+conda create --name wradlib python=2.7
+conda config --add channels conda-forge
+
+[linux]
+source activate wradlib
+
+[windows]
+activate wradlib
+
+conda install wradlib
+
+[linux]
+export GDAL_DATA=/path/to/anaconda/envs/wradlib/share/gdal
+WRADLIB_DATA
+[windows]
+setx GDAL_DATA C:\Users\DAWx\Anaconda2\envs\wradlib\Library\share\gdal
+
+python
+import wradlib
+
