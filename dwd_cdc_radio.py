@@ -13,26 +13,6 @@ except:
 import numpy as np
 
 
-def dwd_extract_radolan_asc(dwd_file, key):
-    # extract data from the tar.gz files and return extracted info as dict and save images
-
-    # http://wradlib.org/wradlib-docs/0.9.0/notebooks/radolan/radolan_quickstart.html
-
-    # holds the extracted data from the tar.gz
-    dwd_data = {}
-
-    tar = tarfile.open(dwd_file, "r:gz")
-    for tarinfo in tar:
-        print tarinfo.name, "is", tarinfo.size, "bytes in size and is",
-        if tarinfo.isreg():
-            print "a regular file."
-        elif tarinfo.isdir():
-            print "a directory."
-        else:
-            print "something else."
-    tar.close()
-
-    return dwd_data
 
 
 def dwd_extract_radolan_bin(dwd_file, key):

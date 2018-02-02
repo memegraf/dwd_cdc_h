@@ -10,9 +10,7 @@ from ftplib import FTP
 import traceback
 
 from dwd_cdc_core import *
-
 #from dwd_cdc_radio import *
-
 
 def main(config, config_folders):
     """ runs through the ftp folder, downloads files, extracts infos and creates output"""
@@ -34,7 +32,7 @@ def main(config, config_folders):
         if config['check_against_last_run']:
             older1h = get_last_run(key, config)
             if older1h:
-                ok_run=bool(1)
+                ok_run = bool(1)
 
         print('run: ' + str(ok_run))
         if ok_run:

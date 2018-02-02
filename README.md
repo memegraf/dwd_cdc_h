@@ -1,5 +1,8 @@
 # dwd_cdc_h
 
+WORK IN PROGRESS
+
+
 Get latest climate station observations from 
 Deutscher Wetter Dienst (DWD) - Climate Data Center (CDC) 
 https://www.dwd.de/DE/klimaumwelt/cdc/cdc_node.html

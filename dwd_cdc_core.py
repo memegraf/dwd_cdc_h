@@ -9,6 +9,8 @@ import os
 import sys
 import ConfigParser
 import time
+import tarfile
+import re
 
 
 
@@ -177,7 +179,10 @@ def dwd_make_event(dwd_event, config, sourcetype, key):
 
 
 def get_config():
+    """ getr local and default configs. is local config is not set, default config file is used
+    note: if you set up a local config, by now it has to have all options.
 
+    """
 
     # read configuration file and set defaults
     actual_config = ConfigParser.SafeConfigParser()
@@ -186,23 +191,30 @@ def get_config():
     actual_config.read('local.conf')
     default_config.read('default.conf')
 
-    actual_config = default_config
+    #simple check if local config is set.
+    try:
+        teststring = str(actual_config.get('folders', 'ftp_local_storage'))
+        print(teststring)
+    except:
 
-    print(str(actual_config))
-    config = {
-        'scriptname': os.path.basename(__file__),
-        'ftp_local_storage': os.path.abspath(os.getcwd() + str(actual_config.get('folders', 'ftp_local_storage'))),
-        'json_local_storage': os.path.abspath(os.getcwd() + str(actual_config.get('folders', 'json_local_storage'))),
-        'lookup': os.path.abspath(os.getcwd() + str(actual_config.get('folders', 'lookup'))),
-        'ftp_host': actual_config.get('ftp', 'ftp_host'),
-        'create_raw_dump': actual_config.getboolean("functions", "create_raw_dump"),
-        'create_names_dump': actual_config.getboolean("functions", "create_names_dump"),
-        'create_fields_dump': actual_config.getboolean("functions", "create_fields_dump"),
-        'create_radio_dump': actual_config.getboolean("functions", "create_radio_dump"),
-        'last_run_file': actual_config.get('folders', 'last_run_file'),
-        'this_run': float(time.time()),
-        'check_against_last_run': actual_config.getboolean("functions", "check_against_last_run")
-    }
+        print('no local config, choosing default config instead')
+        actual_config = default_config
+
+    finally:
+        config = {
+            'scriptname': os.path.basename(__file__),
+            'ftp_local_storage': os.path.abspath(os.getcwd() + str(actual_config.get('folders', 'ftp_local_storage'))),
+            'json_local_storage': os.path.abspath(os.getcwd() + str(actual_config.get('folders', 'json_local_storage'))),
+            'lookup': os.path.abspath(os.getcwd() + str(actual_config.get('folders', 'lookup'))),
+            'ftp_host': actual_config.get('ftp', 'ftp_host'),
+            'create_raw_dump': actual_config.getboolean("functions", "create_raw_dump"),
+            'create_names_dump': actual_config.getboolean("functions", "create_names_dump"),
+            'create_fields_dump': actual_config.getboolean("functions", "create_fields_dump"),
+            'create_radio_dump': actual_config.getboolean("functions", "create_radio_dump"),
+            'last_run_file': actual_config.get('folders', 'last_run_file'),
+            'this_run': float(time.time()),
+            'check_against_last_run': actual_config.getboolean("functions", "check_against_last_run")
+        }
 
     #add sourcetype to general config store
     config.update(dict(actual_config.items('sourcetypes')))
@@ -220,3 +232,52 @@ def get_config():
                 raise
 
     return config, config_folders
+
+
+# this function extracts th etextual infor from the ASC dwd file
+def dwd_extract_radolan_asc(dwd_file, key):
+    # extract textual data from the tar.gz files and return as dict
+
+    # http://wradlib.org/wradlib-docs/0.9.0/notebooks/radolan/radolan_quickstart.html
+
+    # holds the extracted data from the tar.gz
+    dwd_data = {}
+
+    """
+    tar = tarfile.open(dwd_file, "r:gz")
+    for tarinfo in tar:
+        print tarinfo.name, "is", tarinfo.size, "bytes in size and is",
+        if tarinfo.isreg():
+            print "a regular file."
+        elif tarinfo.isdir():
+            print "a directory."
+        else:
+            print "something else."        
+            
+    tar.close()
+    """
+
+    with tarfile.open(dwd_file, "r:gz") as tar:
+        """ we need to extract the time and date from the filename to find the most recent one"""
+        myfiles = tar.getnames()
+
+        # stores filenames and their extracted datetime YYYYMMDDHHMMSS
+        myfiledates={}
+
+        for i in myfiles:
+            mydatetime=re.search("RW_(\d{4})(\d{2})(\d{2})(-)(\d{2})(\d{2})",i)
+            myfiledates[str(i)] = (
+                mydatetime.group(1) +
+                mydatetime.group(2) +
+                mydatetime.group(3) +
+                mydatetime.group(5) +
+                mydatetime.group(6) )
+
+        # get the latest file
+        latest= sorted(myfiledates.keys())[-1]
+
+        # and read its contents into dict
+        dwd_data['filename'] = latest
+        dwd_data['data'] = tar.extractfile(latest).read()
+
+    return dwd_data
